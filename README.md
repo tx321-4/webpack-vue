@@ -326,7 +326,7 @@ module.exports ={
             {
                 test: /\.js$/,
                 loader: 'babel-loader',
-                exclude:'/node_modules/' //exclude表示忽略node_modules文件夹下的文件，不用转码
+                exclude:/node_modules/ //exclude表示忽略node_modules文件夹下的文件，不用转码
             }
         ]
     }
@@ -451,3 +451,7 @@ npm install --save-dev babel-loader@7
 ```
 
 ### 安装完后重新 npm run server 便可以看见，图片也被正确加载了
+
+> Couldn't find preset "@babel/preset-env" relative to directory
+* 原因： `webpack.config.js` 中  exclude:'/node_modules/'  多了 【' '】单引号
+* 解决问题： ` exclude: /node_modules/ `
