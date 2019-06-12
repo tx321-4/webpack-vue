@@ -2,6 +2,8 @@
 var path = require('path');
 var webpack = require('webpack');
 var VueLoaderPlugin = require('vue-loader/lib/plugin');
+var { CleanWebpackPlugin } = require('clean-webpack-plugin');
+
 
 module.exports ={
     entry: ['babel-polyfill','./src/main.js'], //项目的入口文件，webpack会从main.js开始，把所有依赖的js都加载打包
@@ -10,7 +12,7 @@ module.exports ={
         publicPath: '/dist/', //通过devServer 访问路径
         filename: 'build.js' //打包后的文件名
     },
-    devtool: '#eval-source-map',
+    devtool: 'none',//注意修改了这里，这能大大压缩我们的打包代码
     devServer: {
         historyApiFallback: true, //historyApiFallback设置为true那么所有的路径都执行index.html。
         overlay:true, //将错误显示在html之上
@@ -21,10 +23,7 @@ module.exports ={
             'vue$': 'vue/dist/vue.esm.js'
         }
     },
-    plugins: [
-        //make sure to include the plugin for the magic
-        new VueLoaderPlugin()
-    ],
+    
     module: {
         rules: [
             {   //匹配后缀名为css的文件,然后分别用css-loader，vue-style-loader去解析
@@ -83,6 +82,13 @@ module.exports ={
                 }
             }
         ]
-    }
+    },
+    plugins: [
+        new CleanWebpackPlugin(),
+        new webpack.BannerPlugin('版权所有，翻版必究'),
+        //make sure to include the plugin for the magic
+        new VueLoaderPlugin()
+        
+    ]
     
 };

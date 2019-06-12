@@ -11,7 +11,7 @@ npm install webpack -g
 ```bash
 npm install webpack-cli -g
 ```
-
+#
 ## 第二步：项目初始化
 
 ```bash
@@ -150,7 +150,7 @@ export default function say(){
     console.log('hello world!');
 }
 ```    
-
+#
 ## 第三步 引入Vue
 
 >main.js
@@ -202,7 +202,7 @@ module.exports ={
     }
 };
 ```
-
+#
 ## 第四步 引入scss和css
 
 * webpack默认只支持js的模块化，如果需要把其他文件也当成模块引入，就需要相对应的loader解析器
@@ -367,7 +367,7 @@ var app = new Vue({
   }
 });
 ```
-
+#
 ## 第六步： 引入图片资源
 * 把图片当成模块引入
 ```bash
@@ -455,3 +455,224 @@ npm install --save-dev babel-loader@7
 > Couldn't find preset "@babel/preset-env" relative to directory
 * 原因： `webpack.config.js` 中  exclude:'/node_modules/'  多了 【' '】单引号
 * 解决问题： ` exclude: /node_modules/ `
+#
+## 第七步：单文件组件
+* 在前面的例子里，我们使用Vue.component来定义全局组件
+* 在实际项目里，更推荐使用单文件组件
+
+```bash
+npm install --save-dev vue-loader vue-template-compiler
+```
+
+> 添加一个loader：
+
+```javascript
+{
+    test: /\.vue$/,
+    loader: 'vue-loader',
+    options: {
+        loaders:{
+            'scss': [
+                'vue-style-loader',
+                'css-loader',
+                'sass-loader'
+            ],
+            'sass': [
+                'vue-style-loader',
+                'css-loader',
+                'sass-loader?indentedSyntax'
+            ]
+        }
+    }
+}
+```
+
+>在`src`目录下新建一个APP.vue
+```html
+<template>
+    <div id="app">
+        <h1>{{ msg }}</h1>
+        <img src="./img/logo.png" alt="" />
+        <input type="text" v-model="msg" />
+    </div>
+</template>
+
+<script>
+
+import getData from './utils';
+export default {
+    name: 'app',
+    data(){
+        return {
+            msg: 'Welcome to Your Vue.js!'
+        }
+    },
+    created(){
+        this.fetchData();
+    },
+    methods: {
+        async fetchData(){
+            const data = await getData();
+            this.msg = data;
+        }
+    }
+}
+</script>
+
+<style lang="scss">
+#app{
+    font-family: Arial, Helvetica, sans-serif;
+    h1{
+        color:#cc3333;
+    }
+}
+</style>
+```
+
+>main.js
+```javascript
+//main.js
+
+import Vue from 'vue';
+import App from './App.vue';
+
+import './style/common.scss';
+
+new Vue({
+    el: '#app',
+    template: '<App/>',
+    components: { App }
+})
+```
+
+>index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Webpack-Vue</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="/dist/build.js"></script>
+</body>
+</html>
+```
+### 报错： `vue-loader was used without the corresponding plugin. Make sure to include VueLoaderPlugin in your webpack config.`
+* 分析：
+    * 参考官方文档 [https://vue-loader.vuejs.org/migrating.html#a-plugin-is-now-required](https://vue-loader.vuejs.org/migrating.html#a-plugin-is-now-required)
+    * Vue-loader在15.*之后的版本都是 vue-loader的使用都是需要伴生 VueLoaderPlugin的,
+
+* 解决：
+    * webpack.config.js中加入：
+```javascript
+//webpack.config.js
+var path = require('path');
+var webpack = require('webpack');
+var VueLoaderPlugin = require('vue-loader/lib/plugin');
+
+module.exports ={
+entry: './src/main.js', //项目的入口文件，webpack会从main.js开始，把所有依赖的js都加载打包
+output:{
+...
+},
+devServer: {
+...
+},
+resolve: {
+...
+},
+plugins: [
+//make sure to include the plugin for the magic
+new VueLoaderPlugin()
+],
+module: {
+...
+}
+};
+```
+* 最后发现控制台会报一个错误regeneratorRuntime is not defined，因为我们没有安装babel-polyfill
+```bash
+npm install --save-dev babel-polyfill
+```
+* 然后修改webpack.config.js的入口
+```javascript
+entry: ['babel-polyfill', './src/main.js']
+```
+#
+## 第八步 source-map
+### 在开发阶段，调试也是非常重要的一项需求。
+>App.vue：
+```javascript
+created(){
+    this.fetchData();
+    console.log('33333');
+}
+```
+* console栏目中 打印出 '33333';
+
+* 进入的是打包后的build.js，我并不知道是在哪个组件里写的，这就造成了调试困难
+>这时就要修改webpack.config.js
+```javascript
+module.exports = {
+    entry: ['babel-polyfill', './src/main.js'],
+    // 省略其他...
+
+    devtool: '#eval-source-map'
+};
+```
+#
+## 第九步 打包发布
+* 我们试着npm run dev 打包一下文件
+    * 会发现 build.js会非常大，有1.9M多 
+### 在实际发布时，会对文件进行压缩，缓存，分离等等优化处理
+
+>clean-webpack-plugin---清除文件
+```bash
+npm install --save-dev clean-webpack-plugin
+```
+
+### 根目录下新建`webpack.production.config.js`,
+>webpack.production.config.js
+```javascript
+//webpack.config.js
+var path = require('path');
+var webpack = require('webpack');
+var VueLoaderPlugin = require('vue-loader/lib/plugin');
+var { CleanWebpackPlugin } = require('clean-webpack-plugin');
+module.exports ={
+    ...
+    devtool: 'none',//注意修改了这里，这能大大压缩我们的打包代码
+    module: {
+        ...
+    },
+    plugins: [
+        new CleanWebpackPlugin(),
+        new webpack.BannerPlugin('版权所有，翻版必究'),
+        //make sure to include the plugin for the magic
+        new VueLoaderPlugin()     
+    ]
+};
+```
+>在package.json中的script下面写：
+```javascript
+    "build": "set NODE_ENV=production && webpack --config ./webpack.production.config.js --progress",
+```
+
+### 运行`npm run build`, 发现 `build.js` 文件大小100K， 压缩效果很明显。
+
+# 到此，一个webpack4.0+ Vue的项目开发环境搭建完成。
+
+>源代码链接：
+[https://github.com/tx321-4/webpack-vue](https://github.com/tx321-4/webpack-vue)
+
+### 欢迎指正问题！！！
+
+
+
+
+
+
